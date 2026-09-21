@@ -6,7 +6,7 @@
 
 操作は「タップ / クリック」が基本。リストはドラッグ(ホイール・↑↓キーも可)でスクロールし、右端のバーをつかむと一気に動かせる。
 文章は1文字ずつ出る。枠に収まらないときはページに分かれ、▼ が点滅したらタップ(Enter / Space)で次へ。
-1〜5 キーで下のタブを切り替えられるゲームのルールは game.py、アイテムと猫のデータは catalog.py にある。
+1〜5 キーで下のタブを切り替えられる。ゲームのルールは game.py、アイテムと猫のデータは catalog.py にある。
 """
 
 import os
@@ -187,7 +187,7 @@ class App:
 
     def visible_log(self, max_lines):
         """新しい順に、行数に収まる分だけ「一文まるごと」取り出す(途中で切れた文は出さない)。
-        まだ表示の順番回ってきていない(revealed==0)できごとは出さない。"""
+        まだ表示の順番が回ってきていない(revealed==0)できごとは出さない。"""
         out = []
         for entry in reversed(self.log):
             if entry["revealed"] == 0:
@@ -208,7 +208,7 @@ class App:
         self.toast_tw.set_text("\n".join(lines))
 
     def show_message(self, text, col=C_TEXT):
-        """長い文章のダイアログ。ペジに分け▼ が点滅したらタップで進み、最後のページでタップすると閉じる。"""
+        """長い文章のダイアログ。ページに分け、▼ が点滅したらタップで進み、最後のページでタップすると閉じる。"""
         pager = PagedText()
         pager.set(("msg", text), [(text, col)], self.wrap, MSG_W, MSG_H)
         self.message = {"pager": pager}
@@ -656,7 +656,7 @@ class App:
         return self._shop_cache[1]
 
     def draw_shop(self):
-        """最初は、種別タブも商品も何も選ばれていない状態(すべての商品一覧で見える)。
+        """最初は、種別タブも商品も何も選ばれていない状態(すべての商品が一覧で見える)。
         商品をタップすると、その説明が下に開く。閉じるか、同じ商品をもう一度タップすると閉じて、一覧が広くなる。"""
         s = self.state
         self._shop_strip()
@@ -715,7 +715,7 @@ class App:
         # 見出し: 値段と名前。長い名前は「…」で省く(全文は、上の一覧の選択行に出ている)
         self.tx(14, panel_y + 5, self.fit("{0}  {1}".format(game.price_text(sel), it["name"]), SHOP_BUY_X - 14 - 6), C_ACCENT)
         owned = it["kind"] == "toy" and sel in owned_set
-        self.button(SHOP_BUY_X, panel_y + 2, 48, 16, "う", self.do_buy, enabled=not owned)
+        self.button(SHOP_BUY_X, panel_y + 2, 48, 16, "買う", self.do_buy, enabled=not owned)
         self.close_button(SHOP_CLOSE_X, panel_y + 2, 22, 16, self.close_shop_panel)
         ty = panel_y + SHOP_HEAD_H                         # 説明の枠: 見出しの下から、パネルの下端まで
         self.shop_pager.set(("shop", sel), [(info, C_TEXT)], self.wrap, SCREEN_W - 16, th)
@@ -736,7 +736,7 @@ class App:
         return info
 
     def select_shop(self, item_id):
-        """商品をタップ: 説明を開く。いている商品をもう一度タップすると閉じる。"""
+        """商品をタップ: 説明を開く。開いている商品をもう一度タップすると閉じる。"""
         if self.selected["shop"] == item_id:
             self.close_shop_panel()
         else:
@@ -825,7 +825,7 @@ class App:
     # ---- おたから(猫の図鑑)
     def draw_cats(self):
         """図鑑は「出会った順」に並ぶ。猫がはじめて庭に来たときに、その順番の位置が決まる。
-        まだ出会っていな猫の数や、全部で何匹いるかは出さない(出会いの楽しみを取っておくため)。"""
+        まだ出会っていない猫の数や、全部で何匹いるかは出さない(出会いの楽しみを取っておくため)。"""
         s = self.state
         met = game.met_list(s)
 
