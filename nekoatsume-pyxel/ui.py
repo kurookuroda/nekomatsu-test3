@@ -157,7 +157,7 @@ class PagedText:
         base = y + self.h - PAD_Y
         self.back_rect = None
         if len(self.pages) > 1:
-            # 左下: 「◀ 2/3」。◀ は2ページ目以降に出る(押すと前のページへ)ページ番号の位置はどのページでも同じ
+            # 左下: 「◀ 2/3」。◀ は2ページ目以降に出る(押すと前のページへ)。ページ番号の位置はどのページでも同じ
             if self.has_prev:
                 ax, ay = x + PAD_X, base - 10
                 pyxel.tri(ax + 6, ay, ax + 6, ay + 8, ax, ay + 4, C_ACCENT)
