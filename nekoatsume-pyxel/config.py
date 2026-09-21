@@ -88,5 +88,5 @@ def event_text(ev):
     if kind == "food_out":
         return "エサがなくなった"
     if kind == "met":
-        return "{0} はじめ出会った!".format(game.CATS[ev[1]]["name"])
+        return "{0}と はじめて出会った!".format(game.CATS[ev[1]]["name"])
     return ""
