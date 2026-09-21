@@ -25,29 +25,6 @@ import nekoatsume as N           # noqa: E402
 SHOT_DIR = os.environ.get("SHOT_DIR", os.path.join(SAVE_DIR, "shots"))
 os.makedirs(SHOT_DIR, exist_ok=True)
 
-import math                    # noqa: E402
-import struct                  # noqa: E402
-import wave                    # noqa: E402
-
-
-def write_wav(path, freq, sec=0.3, sr=22050):
-    with wave.open(path, "wb") as w:
-        w.setnchannels(1)
-        w.setsampwidth(2)
-        w.setframerate(sr)
-        w.writeframes(b"".join(struct.pack("<h", int(12000 * math.sin(2 * math.pi * freq * i / sr)))
-                               for i in range(int(sr * sec))))
-
-
-AUDIO = os.path.join(SAVE_DIR, "audio")
-os.makedirs(AUDIO, exist_ok=True)
-write_wav(os.path.join(AUDIO, "meow_1.wav"), 500)
-write_wav(os.path.join(AUDIO, "meow_2.wav"), 700)
-with open(os.path.join(AUDIO, "meow_3.wav"), "wb") as f:      # 壊れたファイル(飛ばされるはず)
-    f.write(b"this is not a wav")
-write_wav(os.path.join(AUDIO, "meow_4.wav"), 900)              # 3 が壊れていても 4 は読む
-N.MEOW_DIR = AUDIO
-
 app = N.App(run=False)
 drawn = []                       # 画面に描いた文字を全部覚えておく
 _orig_tx = app.tx
@@ -249,8 +226,8 @@ for _ in range(120):
 settle(); frame(); shot("06_yard_playing")
 assert game.met_list(app.state), "猫が来ているはず"
 
-# ---- 猫が去るときの鳴き声(録音ファイル)
-assert len(app.meow_pool) == 3, len(app.meow_pool)              # 1, 2, 4(壊れた 3 は飛ばす)
+# ---- 猫が去るときの鳴き声(ゲーム内で作った音。AudioManager)
+assert len(app.audio.meow_pool) == 3, len(app.audio.meow_pool)      # 高め・低め・子猫風
 # 実時間に近い進め方(1分ごとに、文字が出きるまで待つ): 猫が去った行が出はじめるたびに、鳴き声が1回鳴る
 plays.clear(); voiced.clear()
 for _ in range(60):
@@ -265,39 +242,38 @@ assert voiced, "猫が去った行があるはず"
 assert len(meows) == len(voiced), (len(meows), len(voiced))
 assert all("帰った" in text for text, _c in voiced)
 assert all(c in (N.MEOW_CHANNEL, 3) for c in plays), "鳴き声はチャンネル2、タイプ音はチャンネル3"
-# 声の選び方: 同じ猫はいつも同じ声。番号つきの声は、猫が多くてもぜんぶ使われる
-assert app._meow_for("gordo") is app._meow_for("gordo")
-used = {id(app._meow_for("cat%04d" % i)) for i in range(1000)}
+# 声の選び方: 同じ猫はいつも同じ声。猫が多くても、3種類ぜんぶが使われる
+assert app.audio.meow_for("gordo") is app.audio.meow_for("gordo")
+used = {id(app.audio.meow_for("cat%04d" % i)) for i in range(1000)}
 assert len(used) == 3
-# 離れていた間のまとめ処理(数分以上)では、鳴らさない・行も出さない
+# 離れていた間のまとめ処理(3分を超えるとき)では、鳴らさない・行も出さない
 n_voiced, n_plays = len(voiced), len(plays)
 T[0] += 3600 * 10
 frame()
 assert len(voiced) == n_voiced and len(plays) == n_plays, "まとめて進めたときは鳴らさない"
 
-# ---- 専用の声(catalog の個性に voice を書いた猫)
-write_wav(os.path.join(AUDIO, "meow_tarawa.wav"), 300)
+# ---- 専用の声(catalog の個性に voice を書いた猫)。専用の声が登録されていれば使い、なければ 3 種類のどれか
+assert app.audio.meow_named == {}
 cats = [(c[0], c[1], c[2], c[3]) + ((dict(c[4], voice="tarawa"),) if len(c) > 4 and c[0] == "tarawa" else c[4:])
         for c in catalog.CATS]
 game.load_catalog(catalog.TOYS, catalog.FOODS, cats, catalog.CATEGORIES)
-app._init_meows()
-assert "tarawa" in app.meow_named
-assert app._meow_for("tarawa") is app.meow_named["tarawa"]
-assert app._meow_for("gordo") in app.meow_pool
+assert app.audio.meow_for("tarawa") in app.audio.meow_pool
+special = pyxel.Sound()
+special.set("c3", "p", "3", "n", 6)
+app.audio.meow_named["tarawa"] = special
+assert app.audio.meow_for("tarawa") is special
+assert app.audio.meow_for("gordo") in app.audio.meow_pool
+del app.audio.meow_named["tarawa"]
 game.load_catalog(catalog.TOYS, catalog.FOODS, catalog.CATS, catalog.CATEGORIES)
-app._init_meows()
-assert app.meow_named == {}
 
-# ---- 音声ファイルが1つも無いとき: 鳴らないだけで、エラーにならない
-N.MEOW_DIR = os.path.join(SAVE_DIR, "no_such_dir")
-app._init_meows()
-assert app.meow_pool == [] and app._meow_for("gordo") is None
+# ---- 鳴き声の音が1つも無いとき: 鳴らないだけで、エラーにならない
+saved_pool = app.audio.meow_pool
+app.audio.meow_pool = []
+assert app.audio.meow_for("gordo") is None
 n_plays = len(plays)
 app._play_meow("gordo")
 assert len(plays) == n_plays
-N.MEOW_DIR = AUDIO
-app._init_meows()
-assert len(app.meow_pool) == 3
+app.audio.meow_pool = saved_pool
 n = len(app.state["pending_money"])
 click(8 + 59, 194 + 10)                                    # さかなを受け取る
 assert app.state["pending_money"] == [] or n == 0
